@@ -44,13 +44,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         locid: Optional[str] = None
         plans_mapping: dict[int, dict[str, object]] = {}
         balance: Optional[float] = None
+        estimated_days_remaining: Optional[int] = None
 
         try:
-            # Fetch services and balance in parallel for efficiency
+            # Fetch services, balance, and estimated days remaining in parallel for efficiency
             services_task = client.async_get_services()
             balance_task = client.async_get_balance()
+            days_task = client.async_get_estimated_days_remaining()
             
-            services, balance = await asyncio.gather(services_task, balance_task, return_exceptions=True)
+            services, balance, estimated_days_remaining = await asyncio.gather(
+                services_task, balance_task, days_task, return_exceptions=True
+            )
             
             # Handle services result
             if isinstance(services, Exception):
@@ -61,6 +65,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             if isinstance(balance, Exception):
                 _LOGGER.debug("Balance fetch error: %s", balance)
                 balance = None
+            
+            # Handle estimated days remaining result
+            if isinstance(estimated_days_remaining, Exception):
+                _LOGGER.debug("Estimated days remaining fetch error: %s", estimated_days_remaining)
+                estimated_days_remaining = None
             
             svc = next((s for s in services if s.service_id == service_id), None)
 
@@ -134,6 +143,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "change_in_progress": change_in_progress,
             "service_speed_label": svc.speed_label if svc else None,
             "account_balance": balance,
+            "estimated_days_remaining": estimated_days_remaining,
         }
 
         # Remember last known good service card

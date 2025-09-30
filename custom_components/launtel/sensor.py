@@ -20,6 +20,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     entities = [
         LauntelCurrentPlanSensor(coordinator, entry),
         LauntelBalanceSensor(coordinator, entry),
+        LauntelEstimatedDaysRemainingSensor(coordinator, entry),
     ]
     async_add_entities(entities)
 
@@ -119,6 +120,50 @@ class LauntelBalanceSensor(CoordinatorEntity, SensorEntity):
             attrs.update({
                 "balance_status": "credit" if balance >= 0 else "debt",
                 "formatted_balance": f"${abs(balance):.2f}",
+            })
+        
+        return attrs
+
+
+class LauntelEstimatedDaysRemainingSensor(CoordinatorEntity, SensorEntity):
+    _attr_has_entity_name = True
+    _attr_icon = "mdi:calendar-clock"
+    _attr_native_unit_of_measurement = "days"
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        svc = coordinator.data.get("service")
+        title = svc.title if svc else entry.title
+        self._attr_name = f"{title} estimated days remaining"
+        self._attr_unique_id = f"{entry.data['service_id']}_estimated_days_remaining"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        svc = self.coordinator.data.get("service")
+        name = svc.title if svc else self._entry.title
+        return DeviceInfo(
+            identifiers={(DOMAIN, str(self._entry.data["service_id"]))},
+            name=name,
+            manufacturer="Launtel",
+            model="Internet Service",
+        )
+
+    @property
+    def native_value(self) -> int | None:
+        return self.coordinator.data.get("estimated_days_remaining")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        days_remaining = self.coordinator.data.get("estimated_days_remaining")
+        attrs: dict[str, Any] = {
+            "last_updated": self.coordinator.last_update_success,
+        }
+        
+        if days_remaining is not None:
+            attrs.update({
+                "status": "low" if days_remaining < 7 else "normal",
+                "weeks_remaining": round(days_remaining / 7, 1),
             })
         
         return attrs
