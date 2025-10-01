@@ -268,70 +268,34 @@ class LauntelClient:
         
         balance = None
         
-        # Look for the specific balance structure in the Launtel portal
-        # Target: <dt>Current Balance</dt><dd><span class="text-success">+$112.65</span></dd>
-        current_balance_dt = soup.find("dt", string=re.compile(r"Current\s+Balance", re.I))
-        if current_balance_dt:
-            dd_balance = current_balance_dt.find_next("dd")
+        # Look for the specific current balance structure
+        # Target: <dt>Current Balance</dt><dd><span>+$112.65</span></dd>
+        # Note: dt may contain nested HTML elements, so we need to search by text content
+        all_dts = soup.find_all("dt")
+        balance_dt = None
+        for dt in all_dts:
+            if re.search(r"Current\s+Balance", dt.get_text(), re.I):
+                balance_dt = dt
+                break
+        
+        if balance_dt:
+            dd_balance = balance_dt.find_next("dd")
             if dd_balance:
                 # Look for the balance span within the dd element
                 balance_span = dd_balance.find("span")
                 if balance_span:
                     balance_text = balance_span.get_text(strip=True)
                     
-                    # Extract numeric value from text like "+$112.65" or "-$50.00"
+                    # Extract numeric value from text like '+$112.65' or '-$50.00'
                     balance_match = re.search(r'([\+\-]?)\$?([0-9,]+\.?[0-9]*)', balance_text)
                     if balance_match:
                         try:
                             sign = balance_match.group(1)
                             balance_str = balance_match.group(2).replace(',', '')
                             balance = float(balance_str)
-                            
-                            # Handle negative balances
-                            if sign == '-':
-                                balance = -balance
+                            balance = -balance if sign == '-' else balance
                         except (ValueError, AttributeError):
                             balance = None
-        
-        # Fallback: look for balance card structure
-        if balance is None:
-            balance_card = soup.find("div", class_="card-balance")
-            if balance_card:
-                balance_dd = balance_card.find("dd")
-                if balance_dd:
-                    balance_span = balance_dd.find("span")
-                    if balance_span:
-                        balance_text = balance_span.get_text(strip=True)
-                        
-                        balance_match = re.search(r'([\+\-]?)\$?([0-9,]+\.?[0-9]*)', balance_text)
-                        if balance_match:
-                            try:
-                                sign = balance_match.group(1)
-                                balance_str = balance_match.group(2).replace(',', '')
-                                balance = float(balance_str)
-                                
-                                if sign == '-':
-                                    balance = -balance
-                            except (ValueError, AttributeError):
-                                balance = None
-        
-        # Final fallback: search for "Current Balance" text pattern in page
-        if balance is None:
-            page_text = soup.get_text()
-            
-            # Look for "Current Balance +$112.65" pattern
-            balance_pattern = r'Current\s+Balance[:\s]*([\+\-]?)\$?([0-9,]+\.?[0-9]*)'
-            match = re.search(balance_pattern, page_text, re.IGNORECASE)
-            if match:
-                try:
-                    sign = match.group(1)
-                    balance_str = match.group(2).replace(',', '')
-                    balance = float(balance_str)
-                    
-                    if sign == '-':
-                        balance = -balance
-                except (ValueError, AttributeError):
-                    balance = None
         
         return balance
 
