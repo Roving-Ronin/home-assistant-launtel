@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.const import CURRENCY_DOLLAR
 
 from .const import DOMAIN
 
@@ -16,8 +17,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator = data["coordinator"]
 
-    entity = LauntelCurrentPlanSensor(coordinator, entry)
-    async_add_entities([entity])
+    entities = [
+        LauntelCurrentPlanSensor(coordinator, entry),
+        LauntelBalanceSensor(coordinator, entry),
+        LauntelEstimatedDaysRemainingSensor(coordinator, entry),
+    ]
+    async_add_entities(entities)
 
 
 class LauntelCurrentPlanSensor(CoordinatorEntity, SensorEntity):
@@ -72,4 +77,93 @@ class LauntelCurrentPlanSensor(CoordinatorEntity, SensorEntity):
             "options": list(data.get("options", [])),
             "plans": plans_serializable,
         }
+        return attrs
+
+
+class LauntelBalanceSensor(CoordinatorEntity, SensorEntity):
+    _attr_has_entity_name = True
+    _attr_icon = "mdi:currency-usd"
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_native_unit_of_measurement = CURRENCY_DOLLAR
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        svc = coordinator.data.get("service")
+        title = svc.title if svc else entry.title
+        self._attr_name = f"{title} balance"
+        self._attr_unique_id = f"{entry.data['service_id']}_account_balance"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        svc = self.coordinator.data.get("service")
+        name = svc.title if svc else self._entry.title
+        return DeviceInfo(
+            identifiers={(DOMAIN, str(self._entry.data["service_id"]))},
+            name=name,
+            manufacturer="Launtel",
+            model="Internet Service",
+        )
+
+    @property
+    def native_value(self) -> float | None:
+        return self.coordinator.data.get("account_balance")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        balance = self.coordinator.data.get("account_balance")
+        attrs: dict[str, Any] = {
+            "last_updated": self.coordinator.last_update_success,
+        }
+        
+        if balance is not None:
+            attrs.update({
+                "balance_status": "credit" if balance >= 0 else "debt",
+                "formatted_balance": f"${abs(balance):.2f}",
+            })
+        
+        return attrs
+
+
+class LauntelEstimatedDaysRemainingSensor(CoordinatorEntity, SensorEntity):
+    _attr_has_entity_name = True
+    _attr_icon = "mdi:calendar-clock"
+    _attr_native_unit_of_measurement = "days"
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        svc = coordinator.data.get("service")
+        title = svc.title if svc else entry.title
+        self._attr_name = f"{title} estimated days remaining"
+        self._attr_unique_id = f"{entry.data['service_id']}_estimated_days_remaining"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        svc = self.coordinator.data.get("service")
+        name = svc.title if svc else self._entry.title
+        return DeviceInfo(
+            identifiers={(DOMAIN, str(self._entry.data["service_id"]))},
+            name=name,
+            manufacturer="Launtel",
+            model="Internet Service",
+        )
+
+    @property
+    def native_value(self) -> int | None:
+        return self.coordinator.data.get("estimated_days_remaining")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        days_remaining = self.coordinator.data.get("estimated_days_remaining")
+        attrs: dict[str, Any] = {
+            "last_updated": self.coordinator.last_update_success,
+        }
+        
+        if days_remaining is not None:
+            attrs.update({
+                "status": "low" if days_remaining < 7 else "normal",
+                "weeks_remaining": round(days_remaining / 7, 1),
+            })
+        
         return attrs

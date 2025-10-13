@@ -257,3 +257,82 @@ class LauntelClient:
         post_url = (BASE_URL / "confirm_service").with_query({"userid": str(user_id)})
         resp = await self._session.post(post_url, data=form_data)
         resp.raise_for_status()
+
+    async def async_get_balance(self) -> Optional[float]:
+        """Get the current account balance from the services page."""
+        await self._ensure_login()
+        resp = await self._session.get(BASE_URL / "services")
+        resp.raise_for_status()
+        html = await resp.text()
+        soup = BeautifulSoup(html, "html.parser")
+        
+        balance = None
+        
+        # Look for the specific current balance structure
+        # Target: <dt>Current Balance</dt><dd><span>+$112.65</span></dd>
+        # Note: dt may contain nested HTML elements, so we need to search by text content
+        all_dts = soup.find_all("dt")
+        balance_dt = None
+        for dt in all_dts:
+            if re.search(r"Current\s+Balance", dt.get_text(), re.I):
+                balance_dt = dt
+                break
+        
+        if balance_dt:
+            dd_balance = balance_dt.find_next("dd")
+            if dd_balance:
+                # Look for the balance span within the dd element
+                balance_span = dd_balance.find("span")
+                if balance_span:
+                    balance_text = balance_span.get_text(strip=True)
+                    
+                    # Extract numeric value from text like '+$112.65' or '-$50.00'
+                    balance_match = re.search(r'([\+\-]?)\$?([0-9,]+\.?[0-9]*)', balance_text)
+                    if balance_match:
+                        try:
+                            sign = balance_match.group(1)
+                            balance_str = balance_match.group(2).replace(',', '')
+                            balance = float(balance_str)
+                            balance = -balance if sign == '-' else balance
+                        except (ValueError, AttributeError):
+                            balance = None
+        
+        return balance
+
+    async def async_get_estimated_days_remaining(self) -> Optional[int]:
+        """Get the estimated days remaining from the services page."""
+        await self._ensure_login()
+        resp = await self._session.get(BASE_URL / "services")
+        resp.raise_for_status()
+        html = await resp.text()
+        soup = BeautifulSoup(html, "html.parser")
+        
+        days_remaining = None
+        
+        # Look for the specific estimated days remaining structure
+        # Target: <dt>Estimated Days Remaining ... </dt><dd><span class="text-success">27</span></dd>
+        # Note: dt may contain nested HTML elements, so we need to search by text content
+        all_dts = soup.find_all("dt")
+        days_dt = None
+        for dt in all_dts:
+            if re.search(r"Estimated\s+Days\s+Remaining", dt.get_text(), re.I):
+                days_dt = dt
+                break
+        
+        if days_dt:
+            dd_days = days_dt.find_next("dd")
+            if dd_days:
+                # Look for the days span within the dd element
+                days_span = dd_days.find("span")
+                if days_span:
+                    days_text = days_span.get_text(strip=True)
+                    
+                    # Extract numeric value from text like "27"
+                    days_match = re.search(r'(\d+)', days_text)
+                    if days_match:
+                        try:
+                            days_remaining = int(days_match.group(1))
+                        except (ValueError, AttributeError):
+                            days_remaining = None
+        
+        return days_remaining
