@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Optional
 
 from homeassistant.components.select import SelectEntity
@@ -64,6 +65,9 @@ class LauntelPlanSelect(CoordinatorEntity, SelectEntity):
         mapping = self.coordinator.data.get("label_to_psid", {})
         psid = mapping.get(option)
         if psid is None:
+            psid = self._find_psid_from_speed(option)
+        if psid is None:
+            await self.coordinator.async_request_refresh()
             raise HomeAssistantError("Invalid plan option selected")
         user_id: str = self.coordinator.data.get("user_id")
         service_id: int = self.coordinator.data.get("service_id")
@@ -86,3 +90,18 @@ class LauntelPlanSelect(CoordinatorEntity, SelectEntity):
         # This method is synchronous (despite the name) in HA
         self.coordinator.async_set_updated_data(data)
         await self.coordinator.async_request_refresh()
+
+    def _find_psid_from_speed(self, option: str) -> Optional[int]:
+        """Try to resolve a plan PSID from a speed string like "100/20"."""
+
+        match = re.fullmatch(r"\s*(\d+)\s*/\s*(\d+)\s*", option)
+        if not match:
+            return None
+
+        speed = f"{match.group(1)}/{match.group(2)}"
+        plans_mapping = self.coordinator.data.get("plans_mapping", {})
+        for psid, plan in plans_mapping.items():
+            plan_speed = plan.get("speed") if isinstance(plan, dict) else None
+            if plan_speed and plan_speed.replace(" ", "") == speed:
+                return psid
+        return None
