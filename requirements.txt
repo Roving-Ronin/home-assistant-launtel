@@ -2,48 +2,58 @@
 #    uv pip compile requirements.in --output-file requirements.txt
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.12.15
+aiohttp==3.13.0
     # via -r requirements.in
 aiosignal==1.4.0
     # via aiohttp
-attrs==25.3.0
+attrs==25.4.0
     # via aiohttp
-beautifulsoup4==4.13.5
+beautifulsoup4==4.14.2
     # via -r requirements.in
-click==8.2.1
+click==8.3.0
     # via typer
-frozenlist==1.7.0
+frozenlist==1.8.0
     # via
     #   aiohttp
     #   aiosignal
-idna==3.10
+idna==3.11
     # via yarl
+iniconfig==2.1.0
+    # via pytest
 markdown-it-py==4.0.0
     # via rich
 mdurl==0.1.2
     # via markdown-it-py
-multidict==6.6.4
+multidict==6.7.0
     # via
     #   aiohttp
     #   yarl
-propcache==0.3.2
+packaging==25.0
+    # via pytest
+pluggy==1.6.0
+    # via pytest
+propcache==0.4.1
     # via
     #   aiohttp
     #   yarl
 pygments==2.19.2
-    # via rich
-rich==14.1.0
+    # via
+    #   pytest
+    #   rich
+pytest==8.4.2
+    # via -r requirements.in
+rich==14.2.0
     # via typer
 shellingham==1.5.4
     # via typer
 soupsieve==2.8
     # via beautifulsoup4
-typer==0.16.1
+typer==0.19.2
     # via -r requirements.in
 typing-extensions==4.15.0
     # via
     #   aiosignal
     #   beautifulsoup4
     #   typer
-yarl==1.20.1
+yarl==1.22.0
     # via aiohttp

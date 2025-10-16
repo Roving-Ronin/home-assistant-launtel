@@ -1,3 +1,4 @@
 typer
 aiohttp
 beautifulsoup4
+pytest
