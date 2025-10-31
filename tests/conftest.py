@@ -151,11 +151,31 @@ ha.helpers.device_registry.DeviceInfo = DeviceInfo
 
 
 class SensorEntity:
-    pass
+    _attr_device_class = None
+    _attr_native_unit_of_measurement = None
+    _attr_state_class = None
+
+    @property
+    def device_class(self):
+        return getattr(self, "_attr_device_class", None)
+
+    @property
+    def native_unit_of_measurement(self):
+        return getattr(self, "_attr_native_unit_of_measurement", None)
+
+    @property
+    def state_class(self):
+        return getattr(self, "_attr_state_class", None)
 
 
 ha.components.sensor.SensorEntity = SensorEntity
-ha.components.sensor.SensorDeviceClass = types.SimpleNamespace(MONETARY="monetary")
+ha.components.sensor.SensorDeviceClass = types.SimpleNamespace(
+    MONETARY="monetary",
+    DURATION="duration",
+)
+ha.components.sensor.SensorStateClass = types.SimpleNamespace(
+    MEASUREMENT="measurement",
+)
 
 
 class SelectEntity:
@@ -179,6 +199,7 @@ class HomeAssistantError(Exception):
 ha.exceptions.HomeAssistantError = HomeAssistantError
 
 ha.const.CURRENCY_DOLLAR = "$"
+ha.const.UnitOfTime = types.SimpleNamespace(DAYS="days")
 
 
 def pytest_configure(config):
