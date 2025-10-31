@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.const import CURRENCY_DOLLAR
+from homeassistant.const import CURRENCY_DOLLAR, UnitOfTime
 
 from .const import DOMAIN
 
@@ -85,6 +85,7 @@ class LauntelBalanceSensor(CoordinatorEntity, SensorEntity):
     _attr_icon = "mdi:currency-usd"
     _attr_device_class = SensorDeviceClass.MONETARY
     _attr_native_unit_of_measurement = CURRENCY_DOLLAR
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
@@ -128,7 +129,9 @@ class LauntelBalanceSensor(CoordinatorEntity, SensorEntity):
 class LauntelEstimatedDaysRemainingSensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = True
     _attr_icon = "mdi:calendar-clock"
-    _attr_native_unit_of_measurement = "days"
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_native_unit_of_measurement = UnitOfTime.DAYS
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)

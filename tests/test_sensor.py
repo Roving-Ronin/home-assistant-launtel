@@ -5,6 +5,8 @@ from custom_components.launtel.sensor import (
     LauntelCurrentPlanSensor,
     LauntelEstimatedDaysRemainingSensor,
 )
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.const import CURRENCY_DOLLAR, UnitOfTime
 
 
 class DummyCoordinator(SimpleNamespace):
@@ -55,6 +57,9 @@ def test_balance_sensor_attributes():
     sensor = LauntelBalanceSensor(coordinator, entry)
 
     assert sensor.native_value == -12.34
+    assert sensor.device_class is SensorDeviceClass.MONETARY
+    assert sensor.native_unit_of_measurement == CURRENCY_DOLLAR
+    assert sensor.state_class is SensorStateClass.MEASUREMENT
     attrs = sensor.extra_state_attributes
     assert attrs["balance_status"] == "debt"
     assert attrs["formatted_balance"] == "$12.34"
@@ -71,6 +76,9 @@ def test_days_remaining_sensor_attributes():
     sensor = LauntelEstimatedDaysRemainingSensor(coordinator, entry)
 
     assert sensor.native_value == 5
+    assert sensor.device_class is SensorDeviceClass.DURATION
+    assert sensor.native_unit_of_measurement == UnitOfTime.DAYS
+    assert sensor.state_class is SensorStateClass.MEASUREMENT
     attrs = sensor.extra_state_attributes
     assert attrs["status"] == "low"
     assert attrs["weeks_remaining"] == 0.7
